@@ -8,6 +8,6 @@ buildImage {
     tag = "latest";
     contents = bash;
     config = {
-      Cmd = [ "${bash}/bin/bash -c 'echo my hello!'" ];
+      Cmd = [ "${bash}/bin/bash" "-c" "echo test hello!" ];
     };
   }

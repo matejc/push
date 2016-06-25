@@ -7,14 +7,21 @@ import tarfile
 import tempfile
 
 
-def spec(image, target):
+def spec(image, do_not_compress=True):
     image_directory = tempfile.mkdtemp()
 
     try:
         extract_image(image, image_directory)
         spec = scan_directory(image_directory)
-        spec['target'] = target
-        convert_to_tgzs(spec)
+
+        # workaround for tgz has every time different digest:
+        # ctime is different and thus sha256 of tgz is different
+        if do_not_compress:
+            for layer in spec['layers']:
+                layer['tgz_digest'] = layer['tar_digest']
+                layer['tgz'] = layer['tar']
+        else:
+            convert_to_tgzs(spec)
     except:
         raise
     else:
@@ -24,9 +31,11 @@ def spec(image, target):
 def extract_image(path, destination):
 
     def check(members):
+        list_members = []
         for tarinfo in members:
             if tarinfo.name is not '.' and tarinfo.name[0] is not '/':
-                yield tarinfo
+                list_members += [tarinfo]
+        return sorted(list_members, key=lambda x: x.name)
 
     tar = tarfile.open(path)
     tar.extractall(destination, members=check(tar))
@@ -42,21 +51,45 @@ def chmod(directory):
         for d in subdirs:
             os.chmod(os.path.join(root, d), 0o700)
         for f in files:
-            os.chmod(os.path.join(root, f), 0o700)
+            file = os.path.join(root, f)
+            os.chmod(file, 0o700)
+            if (f == 'layer.tar'):
+                os.utime(
+                    file, (1466812800, 1466812800))
 
 
 def scan_directory(imagedir):
 
     def create_entry(root, subdirs, files):
         entry = {}
+        diff_ids = []
+
         for f in files:
             if f == 'layer.tar':
                 entry['tar'] = os.path.join(root, f)
                 entry['tar_digest'] = file_digest(entry['tar'])
+                diff_ids += [entry['tar_digest']]
             if f == 'json':
                 with open(os.path.join(root, f), 'r') as f:
                     entry['spec'] = json.loads(f.read())
+
         if entry.get('tar') and entry.get('spec'):
+
+            if not entry['spec'].get('history'):
+                entry['spec']['history'] = [{
+                    'created': entry['spec']['created']
+                }]
+
+            if not entry['spec'].get('rootfs'):
+                entry['spec']['rootfs'] = {
+                    'type': 'layers',
+                    'diff_ids': diff_ids
+                }
+
+            entry['json'] = json.dumps(entry['spec']).encode('utf8')
+            hash = hashlib.sha256(entry['json']).hexdigest()
+            entry['json_digest'] = "sha256:{hash}".format(hash=hash)
+
             return entry
         else:
             return None

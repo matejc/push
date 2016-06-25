@@ -33,20 +33,31 @@ def main():
         description='Push image.tar.gz to registry')
     parser.add_argument('image', help='input image, example: ./image.tar.gz')
     parser.add_argument(
-        '-t', '--target', help='[REGISTRY_HOST[:REGISTRY_PORT]/]NAME[:TAG]')
+        'registry', help='example: http://registry.example.com:5000')
+    parser.add_argument(
+        '-u', '--username', help='Registry username')
+    parser.add_argument(
+        '-p', '--password', help='Registry password')
+    parser.add_argument(
+        '-k', '--keep', action='store_true', help='Keep extracted image')
 
     args = parser.parse_args()
 
     try:
-        image_spec = image.spec(
-            args.image, parse(args.target) if args.target else None)
-        registry.push(image_spec)
+        if (args.username is None) ^ (args.password is None):
+            raise Exception('username or password missing')
+        image_spec = image.spec(args.image)
+        registry.push(image_spec, args.registry, args.username, args.password)
     except:
         raise
     else:
-        pprint(image_spec)
+        # pprint(image_spec)
+        print('Push successful!')
+        pass
     finally:
-        if len(image_spec['root']) > 10:
+        if image_spec and args.keep:
+            print('Keeping image directory: {0}'.format(image_spec['root']))
+        elif image_spec and len(image_spec['root']) > 10:
             print('Removing {0} ...'.format(image_spec['root']))
             shutil.rmtree(image_spec['root'])
 
