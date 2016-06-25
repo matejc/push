@@ -101,8 +101,6 @@ def upload(
 
     handle_http_error(r)
 
-    print(digest, r.status_code, r.text)
-
     if r.status_code == 200:
         print('Already exists, skipping {0} ...'.format(digest))
         return -1
