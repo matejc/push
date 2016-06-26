@@ -11,6 +11,21 @@ Requirements
 - `Nix`, to build image
 - `Python 3` and python package `requests2`, to push image
 
+
+Installation
+------------
+
+Install it with `Nix`:
+
+```
+$ git clone git://github.com/matejc/push
+$ cd ./push
+$ nix-build
+```
+
+the executable will be `./result/bin/push`
+
+
 Usage
 -----
 
@@ -18,7 +33,7 @@ Usage
 Generate image:
 
 ```
-$ nix-build test_image.nix
+$ nix-build test_image.nix -o image.tar.gz
 these derivations will be built:
   /nix/store/xg5g57px4jcr005fbk72s4brsqzpvymw-my-echo-config.json.drv
   /nix/store/fk8giwrv2yysac8ny8449vpf3v5ximny-docker-layer.drv
@@ -42,11 +57,8 @@ Cooking the image
 Pushing:
 
 ```
-$ python3 ./main.py ./result http://localhost:5000
+$ ./result/bin/push ./image.tar.gz http://localhost:5000
 Calculating digest for /tmp/tmpel5zdnw0/2ed41dd9cfe6f617e954eb0ad910b976ecd30f9ee79d483e1078a79ea246bbf8/layer.tar ...
-Converting layer.tar to /tmp/tmpel5zdnw0/2ed41dd9cfe6f617e954eb0ad910b976ecd30f9ee79d483e1078a79ea246bbf8/layer.tgz ...
-Calculating digest for /tmp/tmpel5zdnw0/2ed41dd9cfe6f617e954eb0ad910b976ecd30f9ee79d483e1078a79ea246bbf8/layer.tgz ...
-Registry http://localhost:5000/v2/ is OK
 Pushing sha256:c17b5508357a4d255a0eb98621a496b5abb0d24f5ce5a7abdf6de502f3483fc9 ...
 Pushed sha256:c17b5508357a4d255a0eb98621a496b5abb0d24f5ce5a7abdf6de502f3483fc9
 Pushing sha256:e7abdadd5695178fa4d9ddae87ef1cba37ff934c8dbc7b1dca5b286070e87efd ...

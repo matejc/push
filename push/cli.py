@@ -22,9 +22,8 @@ def main():
     parser.add_argument(
         '-z', '--gzip', action='store_true',
         help='''Compress layers with gzip before uploading, it will take less
-                time to upload, but hash will be always different because ctime
-                in the header of tgz file will always be different, therefore
-                it will be pushed to registry every time all over again'''
+                time to upload, but hash of tgz will be always different,
+                therefore it will be pushed to registry every time'''
     )
 
     args = parser.parse_args()
