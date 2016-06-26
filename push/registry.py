@@ -1,6 +1,5 @@
 import requests
 import json
-import hashlib
 
 
 def push(spec, registry, username, password):

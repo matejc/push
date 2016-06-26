@@ -5,7 +5,6 @@ import os
 import shutil
 import tarfile
 import tempfile
-import re
 
 
 def spec(image):
@@ -79,9 +78,10 @@ def scan_directory(imagedir):
                     'diff_ids': diff_ids
                 }
 
-            entry['json'] = json.dumps(entry['spec'], sort_keys=True).encode('utf8')
-            hash = hashlib.sha256(entry['json']).hexdigest()
-            entry['json_digest'] = "sha256:{hash}".format(hash=hash)
+            entry['json'] = json.dumps(
+                entry['spec'], sort_keys=True).encode('utf8')
+            entry['json_digest'] = "sha256:{0}".format(
+                hashlib.sha256(entry['json']).hexdigest())
 
             return entry
         else:
