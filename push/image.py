@@ -8,60 +8,17 @@ import tempfile
 import re
 
 
-def spec(image, do_not_compress=True):
+def spec(image):
     destination = tempfile.mkdtemp()
 
     try:
         extract_image(image, destination)
         manifest = scan_directory(destination)
-
-        # workaround for tgz has every time different digest:
-        # ctime is different and thus digest of tgz is different
-        if do_not_compress:
-            for layer in manifest['layers']:
-                layer['tgz_digest'] = layer['tar_digest']
-                layer['tgz'] = layer['tar']
-        else:
-            extract_to_tgzs(image, destination, manifest)
+        convert_to_tgzs(manifest)
     except:
         raise
     else:
         return manifest
-
-
-def extract_to_tgzs(image, destination, manifest):
-    def get_layer(tarpath):
-        layer_id = re.match(r'\.?/?(\w+)/layer\.tar', tarpath).groups()[0]
-        for layer in manifest['layers']:
-            if layer['spec']['id'] == layer_id:
-                return layer
-
-    tar = tarfile.open(image)
-    for tarinfo in tar:
-        if tarinfo.name is not '.' and tarinfo.name[0] is not '/' and \
-                tarinfo.name[-10:] == '/layer.tar':
-            layer = get_layer(tarinfo.name)
-            layer['tarinfo'] = tarinfo
-
-    for layer in manifest['layers']:
-        f_in = tar.extractfile(layer['tarinfo'])
-
-        layer['tgz'] = '{0}{1}layer.tgz'.format(
-            os.path.dirname(layer['tar']), os.sep)
-
-        print('Converting layer.tar to {0} ...'.format(layer['tgz']))
-
-        with gzip.open(layer['tgz'], 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
-
-        layer['tgz_digest'] = file_digest(layer['tgz'])
-        os.remove(layer['tar'])
-        del layer['tar']
-        del layer['tarinfo']
-
-    tar.close()
-
-    chmod(destination)
 
 
 def extract_image(path, destination):
@@ -154,6 +111,7 @@ def convert_to_tgzs(manifest):
             print('Converting layer.tar to {0} ...'.format(layer['tgz']))
             with gzip.open(layer['tgz'], 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
+        patch_tgz(layer['tgz'])
         layer['tgz_digest'] = file_digest(layer['tgz'])
         os.remove(layer['tar'])
         del layer['tar']
@@ -169,3 +127,10 @@ def file_digest(path):
             hasher.update(buf)
             buf = afile.read(BLOCKSIZE)
     return 'sha256:{0}'.format(hasher.hexdigest())
+
+
+def patch_tgz(path):
+    # patch mtime
+    with open(path, 'r+b') as f:
+        f.seek(4)
+        f.write(b'\x00\x00\x00\x00')

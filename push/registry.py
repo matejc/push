@@ -1,5 +1,6 @@
 import requests
 import json
+import hashlib
 
 
 def push(spec, registry, username, password):
@@ -9,19 +10,38 @@ def push(spec, registry, username, password):
     is_alive(registry, auth)
 
     for name in spec['repositories']:
+
         for tag in spec['repositories'][name]:
+            sizes = []
+
             layer = get_layer(spec, spec['repositories'][name][tag])
+
             upload_layer(registry, name, tag, layer, auth)
 
-        upload_manifest(
-            registry,
-            name,
-            tag,
-            spec['layers'][0]['json_size'],
-            spec['layers'][0]['json_digest'],
-            spec['layers'],
-            auth
-        )
+            sizes += [layer['tgz_size'], layer['json_size']]
+
+            uploaded_size = 0
+            not_uploaded_count = 0
+            for size in sizes:
+                if size == -1:
+                    not_uploaded_count += 1
+                else:
+                    uploaded_size += int(size)
+
+            if not_uploaded_count == len(sizes):
+                print('[{0}:{1}] Nothing new uploaded'.format(name, tag))
+            else:
+                upload_manifest(
+                    registry,
+                    name,
+                    tag,
+                    spec['layers'][0]['json_size'],
+                    spec['layers'][0]['json_digest'],
+                    spec['layers'],
+                    auth
+                )
+                print('[{0}:{1}] Uploaded {2:.2f} KiB'.format(
+                    name, tag, uploaded_size/1024))
 
 
 def get_layer(spec, layer_id):

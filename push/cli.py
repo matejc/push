@@ -19,24 +19,18 @@ def main():
         '-p', '--password', help='Registry password')
     parser.add_argument(
         '-k', '--keep', action='store_true', help='Keep extracted image')
-    parser.add_argument(
-        '-z', '--gzip', action='store_true',
-        help='''Compress layers with gzip before uploading, it will take less
-                time to upload, but hash of tgz will be always different,
-                therefore it will be pushed to registry every time'''
-    )
 
     args = parser.parse_args()
 
     try:
         if (args.username is None) ^ (args.password is None):
             raise Exception('username or password missing')
-        image_spec = image.spec(args.image, do_not_compress=not args.gzip)
+        image_spec = image.spec(args.image)
         registry.push(image_spec, args.registry, args.username, args.password)
     except:
         raise
     else:
-        print('Push successful!')
+        print('Success!')
     finally:
         if image_spec and args.keep:
             print('Keeping image directory: {0}'.format(image_spec['root']))
