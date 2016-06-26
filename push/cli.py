@@ -1,31 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
-import re
 import shutil
 
-from pprint import pprint
 from push import image
 from push import registry
-
-
-def parse(s):
-    address, name, tag = re.match('^(.+/)?([^:]+)(:\w+)?$', s).groups()
-    host, port = None, None
-
-    if address is not None:
-        host, port = re.match('^([^:]+)(:\d+)?/$', address).groups()
-    if port is not None:
-        port = port[1:]
-    if tag is not None:
-        tag = tag[1:]
-
-    return {
-       'host': host,
-       'port': port,
-       'name': name,
-       'tag': tag
-    }
 
 
 def main():
@@ -51,9 +30,7 @@ def main():
     except:
         raise
     else:
-        # pprint(image_spec)
         print('Push successful!')
-        pass
     finally:
         if image_spec and args.keep:
             print('Keeping image directory: {0}'.format(image_spec['root']))

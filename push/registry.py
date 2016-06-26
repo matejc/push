@@ -74,7 +74,7 @@ def upload_manifest(
             "digest": layer['tgz_digest']
         }]
 
-    data = json.dumps(manifest).encode('utf8')
+    data = json.dumps(manifest, sort_keys=True).encode('utf8')
 
     headers = {
         'Content-Type': 'application/vnd.docker.distribution.manifest.v2+json'

@@ -15,7 +15,7 @@ def spec(image, do_not_compress=True):
         spec = scan_directory(image_directory)
 
         # workaround for tgz has every time different digest:
-        # ctime is different and thus sha256 of tgz is different
+        # ctime is different and thus digest of tgz is different
         if do_not_compress:
             for layer in spec['layers']:
                 layer['tgz_digest'] = layer['tar_digest']
@@ -86,7 +86,7 @@ def scan_directory(imagedir):
                     'diff_ids': diff_ids
                 }
 
-            entry['json'] = json.dumps(entry['spec']).encode('utf8')
+            entry['json'] = json.dumps(entry['spec'], sort_keys=True).encode('utf8')
             hash = hashlib.sha256(entry['json']).hexdigest()
             entry['json_digest'] = "sha256:{hash}".format(hash=hash)
 
