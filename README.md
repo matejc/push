@@ -9,13 +9,13 @@ Requirements
 ------------
 
 - `Nix`, to build image
-- `Python 3` and python package `requests2`, to push image
+- `Python 3.5` and python package `requests>=2.9.1`, to push image
 
 
-Installation
-------------
+Build
+-----
 
-Install it with `Nix`:
+Build it with `Nix`:
 
 ```
 $ git clone git://github.com/matejc/push
@@ -58,17 +58,21 @@ Pushing:
 
 ```
 $ ./result/bin/push ./image.tar.gz http://localhost:5000
-Calculating digest for /tmp/tmpel5zdnw0/2ed41dd9cfe6f617e954eb0ad910b976ecd30f9ee79d483e1078a79ea246bbf8/layer.tar ...
-Pushing sha256:c17b5508357a4d255a0eb98621a496b5abb0d24f5ce5a7abdf6de502f3483fc9 ...
-Pushed sha256:c17b5508357a4d255a0eb98621a496b5abb0d24f5ce5a7abdf6de502f3483fc9
-Pushing sha256:e7abdadd5695178fa4d9ddae87ef1cba37ff934c8dbc7b1dca5b286070e87efd ...
-Pushed sha256:e7abdadd5695178fa4d9ddae87ef1cba37ff934c8dbc7b1dca5b286070e87efd
-Push successful!
-Removing /tmp/tmpel5zdnw0 ...
+[2ed41dd] Calculating digest for layer.tar ...
+[2ed41dd] Compressing layer.tar to layer.tgz ...
+[2ed41dd] Calculating digest for layer.tgz ...
+Registry http://localhost:5000/v2/ is OK
+[my-echo:latest] Pushing 17a778a3b461 ...
+[my-echo:latest] Pushed 17a778a3b461
+[my-echo:latest] Pushing a8c92d823a55 ...
+[my-echo:latest] Pushed a8c92d823a55
+[my-echo:latest] Uploaded 9035.60 KiB
+Success!
+Removing /tmp/tmpp9ks3qij ...
 ```
 
 
-Pull:
+To test it, do pull:
 
 ```
 $ docker pull localhost:5000/my-echo:latest
@@ -79,7 +83,7 @@ Status: Downloaded newer image for localhost:5000/my-echo:latest
 ```
 
 
-And run:
+and run:
 
 ```
 $ docker run -ti --rm localhost:5000/my-echo:latest

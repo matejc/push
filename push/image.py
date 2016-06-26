@@ -12,12 +12,12 @@ def spec(image):
 
     try:
         extract_image(image, destination)
-        manifest = scan_directory(destination)
-        convert_to_tgzs(manifest)
+        spec = scan_directory(destination)
+        compress_to_tgzs(spec)
     except:
         raise
     else:
-        return manifest
+        return spec
 
 
 def extract_image(path, destination):
@@ -103,12 +103,13 @@ def scan_directory(imagedir):
     }
 
 
-def convert_to_tgzs(manifest):
-    for layer in manifest['layers']:
+def compress_to_tgzs(spec):
+    for layer in spec['layers']:
         with open(layer['tar'], 'rb') as f_in:
             layer['tgz'] = '{0}{1}layer.tgz'.format(
                 os.path.dirname(layer['tar']), os.sep)
-            print('Converting layer.tar to {0} ...'.format(layer['tgz']))
+            print('[{0}] Compressing layer.tar to layer.tgz ...'.format(
+                layer['spec']['id'][:7]))
             with gzip.open(layer['tgz'], 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
         patch_tgz(layer['tgz'])
@@ -118,7 +119,8 @@ def convert_to_tgzs(manifest):
 
 
 def file_digest(path):
-    print('Calculating digest for {0} ...'.format(path))
+    print('[{0}] Calculating digest for {1} ...'.format(
+        os.path.basename(os.path.dirname(path))[:7], os.path.basename(path)))
     hasher = hashlib.sha256()
     BLOCKSIZE = 65536
     with open(path, 'rb') as afile:

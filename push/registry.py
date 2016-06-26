@@ -1,5 +1,6 @@
 import requests
 import json
+import hashlib
 
 
 def push(spec, registry, username, password):
@@ -53,6 +54,7 @@ def upload_layer(registry, name, tag, layer, auth):
     tgz_size = upload(
         registry,
         name,
+        tag,
         layer['tgz_digest'],
         'application/vnd.docker.image.rootfs.diff.tar.gzip',
         file=layer['tgz'],
@@ -63,6 +65,7 @@ def upload_layer(registry, name, tag, layer, auth):
     json_size = upload(
         registry,
         name,
+        tag,
         layer['json_digest'],
         'application/vnd.docker.container.image.v1+json',
         data=layer['json'],
@@ -113,7 +116,7 @@ def upload_manifest(
 
 
 def upload(
-    registry, name, digest, content_type, data=None, file=None, auth=None
+    registry, name, tag, digest, content_type, data=None, file=None, auth=None
 ):
     r = requests.head('{registry}/v2/{name}/blobs/{digest}'.format(
         registry=registry, name=name, digest=digest), auth=auth)
@@ -121,7 +124,8 @@ def upload(
     handle_http_error(r)
 
     if r.status_code == 200:
-        print('Already exists, skipping {0} ...'.format(digest))
+        print('[{0}:{1}] Already exists, skipping {2} ...'.format(
+            name, tag, digest[7:19]))
         return -1
 
     r = requests.post('{registry}/v2/{name}/blobs/uploads/'.format(
@@ -134,7 +138,7 @@ def upload(
 
     headers = {'Content-Type': content_type}
 
-    print('Pushing {0} ...'.format(digest))
+    print('[{0}:{1}] Pushing {2} ...'.format(name, tag, digest[7:19]))
     r = requests.put('{uploadURL}&digest={digest}'.format(
         uploadURL=uploadURL, digest=digest
     ), headers=headers, auth=auth, data=data)
@@ -147,7 +151,7 @@ def upload(
     handle_http_error(r)
 
     if r.status_code == 200:
-        print('Pushed {0}'.format(digest))
+        print('[{0}:{1}] Pushed {2}'.format(name, tag, digest[7:19]))
         return r.headers['Content-Length']
     else:
         raise Exception('{0}: {1} {2}'.format(
