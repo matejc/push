@@ -18,6 +18,10 @@ def main():
     parser.add_argument(
         '-p', '--password', help='Registry password')
     parser.add_argument(
+        '-N', '--name', help='Registry image name')
+    parser.add_argument(
+        '-T', '--tag', help='Registry image tag')
+    parser.add_argument(
         '-k', '--keep', action='store_true', help='Keep extracted image')
 
     args = parser.parse_args()
@@ -26,7 +30,8 @@ def main():
         if (args.username is None) ^ (args.password is None):
             raise Exception('username or password missing')
         image_spec = image.spec(args.image)
-        registry.push(image_spec, args.registry, args.username, args.password)
+        registry.push(image_spec, args.registry, args.username, args.password,
+                      args.name, args.tag)
     except:
         raise
     else:

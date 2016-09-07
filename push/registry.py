@@ -3,18 +3,18 @@ import json
 import hashlib
 
 
-def push(spec, registry, username, password):
+def push(spec, registry, username, password, name, tag):
     auth = None
     if username and password:
         auth = (username, password)
     is_alive(registry, auth)
 
-    for name in spec['repositories']:
+    for repo_name in spec['repositories']:
 
-        for tag in spec['repositories'][name]:
+        for repo_tag in spec['repositories'][repo_name]:
             sizes = []
 
-            layer = get_layer(spec, spec['repositories'][name][tag])
+            layer = get_layer(spec, spec['repositories'][repo_name][repo_tag])
 
             upload_layer(registry, name, tag, layer, auth)
 
@@ -28,20 +28,20 @@ def push(spec, registry, username, password):
                 else:
                     uploaded_size += int(size)
 
-            if not_uploaded_count == len(sizes):
-                print('[{0}:{1}] Nothing new uploaded'.format(name, tag))
-            else:
-                upload_manifest(
-                    registry,
-                    name,
-                    tag,
-                    spec['layers'][0]['json_size'],
-                    spec['layers'][0]['json_digest'],
-                    spec['layers'],
-                    auth
-                )
-                print('[{0}:{1}] Uploaded {2:.2f} KiB'.format(
-                    name, tag, uploaded_size/1024))
+            #if not_uploaded_count == len(sizes):
+            #    print('[{0}:{1}] Nothing new uploaded'.format(repo_name, repo_tag))
+            #else:
+            upload_manifest(
+                registry,
+                name,
+                tag,
+                spec['layers'][0]['json_size'],
+                spec['layers'][0]['json_digest'],
+                spec['layers'],
+                auth
+            )
+            print('[{0}:{1}] Uploaded {2:.2f} KiB'.format(
+                name, tag, uploaded_size/1024))
 
 
 def get_layer(spec, layer_id):
@@ -123,7 +123,7 @@ def upload(
 
     handle_http_error(r)
 
-    if r.status_code == 200:
+    if r.status_code == 200 or r.status_code == 307:
         print('[{0}:{1}] Already exists, skipping {2} ...'.format(
             name, tag, digest[7:19]))
         return -1
@@ -150,7 +150,7 @@ def upload(
 
     handle_http_error(r)
 
-    if r.status_code == 200:
+    if r.status_code == 200 or r.status_code == 307:
         print('[{0}:{1}] Pushed {2}'.format(name, tag, digest[7:19]))
         return r.headers['Content-Length']
     else:
@@ -159,7 +159,7 @@ def upload(
 
 
 def handle_http_error(response):
-    if response.status_code not in [200, 201, 202, 404]:
+    if response.status_code not in [200, 201, 202, 307, 404]:
         raise Exception('{0}: {1} {2}'.format(
             response.url, response.status_code, response.text))
 
