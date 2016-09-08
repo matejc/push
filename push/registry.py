@@ -150,9 +150,13 @@ def upload(
 
     handle_http_error(r)
 
-    if r.status_code == 200 or r.status_code == 307:
+    if r.status_code == 200:
         print('[{0}:{1}] Pushed {2}'.format(name, tag, digest[7:19]))
-        return r.headers['Content-Length']
+    elif r.status_code == 307:
+        print('[{0}:{1}] Pushed {2}'.format(name, tag, digest[7:19]))
+        r2 = requests.head(r.headers['Location'])
+        handle_http_error(r2)
+        return r2.headers['Content-Length']
     else:
         raise Exception('{0}: {1} {2}'.format(
             r.url, r.status_code, r.text))
