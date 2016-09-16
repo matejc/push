@@ -1,13 +1,14 @@
 import requests
 import json
-import hashlib
+import re
 
 
 def push(spec, registry, username, password, name, tag):
-    auth = None
+    auth = dict()
     if username and password:
-        auth = (username, password)
-    is_alive(registry, auth)
+        auth = dict(auth=(username, password))
+
+    auth = authenticate(registry, auth, name)
 
     for repo_name in spec['repositories']:
 
@@ -58,7 +59,7 @@ def upload_layer(registry, name, tag, layer, auth):
         layer['tgz_digest'],
         'application/vnd.docker.image.rootfs.diff.tar.gzip',
         file=layer['tgz'],
-        auth=auth
+        auth=auth,
     )
     layer['tgz_size'] = tgz_size
 
@@ -69,14 +70,13 @@ def upload_layer(registry, name, tag, layer, auth):
         layer['json_digest'],
         'application/vnd.docker.container.image.v1+json',
         data=layer['json'],
-        auth=auth
+        auth=auth,
     )
     layer['json_size'] = json_size
 
 
-def upload_manifest(
-    registry, name, tag, json_size, json_digest, layers, auth=None
-):
+def upload_manifest(registry, name, tag, json_size, json_digest, layers,
+                    auth=dict()):
     manifest = {
        "schemaVersion": 2,
        "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
@@ -98,30 +98,27 @@ def upload_manifest(
 
     data = json.dumps(manifest, sort_keys=True).encode('utf8')
 
-    headers = {
-        'Content-Type': 'application/vnd.docker.distribution.manifest.v2+json'
-    }
+    if 'headers' not in auth:
+        auth['headers'] = dict()
+    auth['headers']['Content-Type'] = 'application/vnd.docker.distribution.manifest.v2+json'  # noqa
 
     r = requests.put('{registry}/v2/{name}/manifests/{reference}'.format(
         registry=registry, name=name, reference=tag
-    ), headers=headers, data=data, auth=auth)
+    ), data=data, **auth)
 
     handle_http_error(r)
 
     r = requests.head('{registry}/v2/{name}/manifests/{reference}'.format(
         registry=registry, name=name, reference=tag
-    ), headers=headers, auth=auth)
+    ), **auth)
 
     handle_http_error(r)
 
 
-def upload(
-    registry, name, tag, digest, content_type, data=None, file=None, auth=None
-):
+def upload(registry, name, tag, digest, content_type, data=None, file=None,
+           auth=dict()):
     r = requests.head('{registry}/v2/{name}/blobs/{digest}'.format(
-        registry=registry, name=name, digest=digest), auth=auth)
-
-    handle_http_error(r)
+        registry=registry, name=name, digest=digest), **auth)
 
     if r.status_code == 200 or r.status_code == 307:
         print('[{0}:{1}] Already exists, skipping {2} ...'.format(
@@ -129,24 +126,28 @@ def upload(
         return -1
 
     r = requests.post('{registry}/v2/{name}/blobs/uploads/'.format(
-        registry=registry, name=name), auth=auth)
+        registry=registry, name=name), **auth)
     handle_http_error(r)
     uploadURL = r.headers['Location']
 
     if file and not data:
         data = open(file, 'rb')
 
-    headers = {'Content-Type': content_type}
+    if 'headers' not in auth:
+        auth['headers'] = dict()
+    auth['headers']['Content-Type'] = content_type
 
     print('[{0}:{1}] Pushing {2} ...'.format(name, tag, digest[7:19]))
     r = requests.put('{uploadURL}&digest={digest}'.format(
         uploadURL=uploadURL, digest=digest
-    ), headers=headers, auth=auth, data=data)
+    ), data=data, **auth)
 
     handle_http_error(r)
 
+    del auth['headers']['Content-Type']
+
     r = requests.head('{registry}/v2/{name}/blobs/{digest}'.format(
-        registry=registry, name=name, digest=digest), auth=auth)
+        registry=registry, name=name, digest=digest), **auth)
 
     handle_http_error(r)
 
@@ -163,13 +164,27 @@ def upload(
 
 
 def handle_http_error(response):
-    if response.status_code not in [200, 201, 202, 307, 404]:
+    if response.status_code not in [200, 201, 202, 307]:
         raise Exception('{0}: {1} {2}'.format(
             response.url, response.status_code, response.text))
 
 
-def is_alive(registry, auth):
+def authenticate(registry, auth, name):
     url = '{0}/v2/'.format(registry)
-    r = requests.head(url, auth=auth)
-    handle_http_error(r)
+    r = requests.head(url, **auth)
+    if r.status_code == 401 and \
+            'WWW-Authenticate' in r.headers and \
+            r.headers['WWW-Authenticate'].startswith('Bearer '):
+        reg = re.compile('(\w+)[:=] ?"?([^" ,]+)"?')
+        params= dict(reg.findall(r.headers['WWW-Authenticate']))
+        url = params['realm']
+        del params['realm']
+        params['scope'] = "repository:%s:pull,push" % name
+        r = requests.get(url, params=params, **auth)
+        handle_http_error(r)
+        token = r.json()['token']
+        auth = dict(headers={'Authorization': 'Bearer ' + token})
+    else:
+        handle_http_error(r)
     print('Registry {0} is OK'.format(url))
+    return auth
