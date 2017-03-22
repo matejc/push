@@ -20,7 +20,7 @@ python35Packages.buildPythonPackage rec {
   meta = {
     homepage = "http://github.com/matejc/push/";
     description = "Utility to push tar.gz docker images to v2 registry";
-    license = stdenv.licenses.bsd3;
+    license = stdenv.lib.licenses.bsd3;
     maintainers = with stdenv.maintainers; [ matejc ];
   };
 }
